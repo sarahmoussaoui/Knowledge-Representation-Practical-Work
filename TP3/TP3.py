@@ -1,5 +1,5 @@
 # TP Reseaux Bayesiens avec DiscreteBayesianNetwork
-from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import VariableElimination
 import numpy as np
