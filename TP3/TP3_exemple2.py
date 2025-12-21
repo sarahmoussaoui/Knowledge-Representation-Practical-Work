@@ -1,93 +1,142 @@
-# TP Reseaux Bayesiens avec DiscreteBayesianNetwork
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import VariableElimination
-import numpy as np
-import matplotlib.pyplot as plt
-import networkx as nx
 
-# Fonction d'affichage de la structure (conservée)
 def afficher_structure(model, nom):
     """Affiche la structure d'un reseau de maniere textuelle"""
     print(f"\n{nom}:")
     print("Structure des dependances:")
     for edge in model.edges():
-        print(f"  {edge[0]} -> {edge[1]}")
+        print(f"  {edge[0]} -> {edge[1]}")
     print(f"Total: {len(model.nodes())} noeuds, {len(model.edges())} aretes")
     print("Noeuds racines:", [node for node in model.nodes() if len(model.get_parents(node)) == 0])
 
-# Fonction de visualisation (conservée)
-def visualiser_reseau(model, titre):
-    """Visualise un reseau bayesien avec matplotlib"""
-    plt.figure(figsize=(10, 8))
-    G = nx.DiGraph()
-    G.add_edges_from(model.edges())
-    pos = nx.spring_layout(G, k=2.5, iterations=50) # Ajustement de l'espacement
-    
-    nx.draw_networkx_nodes(G, pos, node_size=2000, 
-                           node_color='lightcoral', alpha=0.9,
-                           edgecolors='black', linewidths=1)
-    
-    nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True,
-                           arrowsize=25, arrowstyle='->', width=2)
-    
-    nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
-    
-    plt.title(titre, fontsize=16, fontweight='bold', pad=20)
-    plt.axis('off')
-    plt.tight_layout()
-    plt.show()
-
 
 # =============================================================================
-# ETAPE 6 : DIAGNOSTIC DE PANNE SATELLITE (CONSERVÉ)
+# EXEMPLE 2 : PANNE DE VÉHICULE DE TRANSPORT
 # =============================================================================
 print("\n" + "="*50)
-print("ETAPE 6 : DIAGNOSTIC DE PANNE SATELLITE")
-print("=======================================")
+print("TRANSPORT : DIAGNOSTIC PANNE MOTEUR")
+print("="*50)
 
-model_sat = BayesianNetwork([
-    ('PannePropulsion', 'DeriveOrbite'),
-    ('DegradationPanneaux', 'BaisseEnergie'),
-    ('BaisseEnergie', 'InstrumentsOFF'),
-    ('SurchauffeThermique', 'OrientationInstable'),
-    ('OrientationInstable', 'DeriveOrbite'),
-    ('DeriveOrbite', 'PerteSignal'),
-    ('InstrumentsOFF', 'PerteSignal')
+# Structure :
+# - AgeBatterie influence EtatElectrique
+# - EtatElectrique et NiveauCarburant influencent DemarrageMoteur
+# - DemarrageMoteur influence VoyantTableauBord
+model_transport = BayesianNetwork([
+    ('AgeBatterie', 'EtatElectrique'),
+    ('EtatElectrique', 'DemarrageMoteur'),
+    ('NiveauCarburant', 'DemarrageMoteur'),
+    ('DemarrageMoteur', 'VoyantTableauBord')
 ])
 
-# CPDs (Tables de Probabilités Conditionnelles pour le Satellite)
-# ... (Les CPDs sont conservées pour la validité du modèle)
-cpd_prop = TabularCPD(variable='PannePropulsion', variable_card=2, values=[[0.93], [0.07]])
-cpd_pan = TabularCPD(variable='DegradationPanneaux', variable_card=2, values=[[0.88], [0.12]])
-cpd_therm = TabularCPD(variable='SurchauffeThermique', variable_card=2, values=[[0.95], [0.05]])
-cpd_energie = TabularCPD(variable='BaisseEnergie', variable_card=2, values=[[0.90, 0.25], [0.10, 0.75]], evidence=['DegradationPanneaux'], evidence_card=[2])
-cpd_inst = TabularCPD(variable='InstrumentsOFF', variable_card=2, values=[[0.93, 0.30], [0.07, 0.70]], evidence=['BaisseEnergie'], evidence_card=[2])
-cpd_orient = TabularCPD(variable='OrientationInstable', variable_card=2, values=[[0.94, 0.15], [0.06, 0.85]], evidence=['SurchauffeThermique'], evidence_card=[2])
-cpd_orbite = TabularCPD(variable='DeriveOrbite', variable_card=2, values=[[0.98, 0.70, 0.65, 0.10], [0.02, 0.30, 0.35, 0.90]], evidence=['PannePropulsion', 'OrientationInstable'], evidence_card=[2, 2])
-cpd_signal = TabularCPD(variable='PerteSignal', variable_card=2, values=[[0.97, 0.50, 0.45, 0.05], [0.03, 0.50, 0.55, 0.95]], evidence=['DeriveOrbite', 'InstrumentsOFF'], evidence_card=[2, 2])
+# CPDs (0 = Vieux/Vide/Echec , 1 = Neuf/Plein/Succès)
+cpd_age = TabularCPD(variable='AgeBatterie', variable_card=2, values=[[0.4], [0.6]])
+cpd_carb = TabularCPD(variable='NiveauCarburant', variable_card=2, values=[[0.15], [0.85]])
 
-model_sat.add_cpds(cpd_prop, cpd_pan, cpd_therm, cpd_energie, cpd_inst,
-                   cpd_orient, cpd_orbite, cpd_signal)
+# EtatElectrique (Parent: AgeBatterie)
+cpd_elec = TabularCPD(
+    variable='EtatElectrique', variable_card=2,
+    values=[[0.8, 0.1],   # Probabilité Elec = HS
+            [0.2, 0.9]],  # Probabilité Elec = OK
+    evidence=['AgeBatterie'], evidence_card=[2]
+)
 
-print("Modele satellite valide:", model_sat.check_model())
+# DemarrageMoteur (Parents: Elec, Carburant)
+cpd_moteur = TabularCPD(
+    variable='DemarrageMoteur', variable_card=2,
+    values=[[1.0, 0.9, 0.8, 0.02], # Probabilité Echec
+            [0.0, 0.1, 0.2, 0.98]], # Probabilité Succès
+    evidence=['EtatElectrique', 'NiveauCarburant'], evidence_card=[2, 2]
+)
 
-# Inference
-inference_sat = VariableElimination(model_sat)
+# VoyantTableauBord (Parent: DemarrageMoteur)
+cpd_voyant = TabularCPD(
+    variable='VoyantTableauBord', variable_card=2,
+    values=[[0.05, 0.95],  # Voyant Eteint
+            [0.95, 0.05]], # Voyant Allumé (Alerte)
+    evidence=['DemarrageMoteur'], evidence_card=[2]
+)
 
-# Scenario 1: Perte de signal + Instruments off (critique)
-print("\n--- CAS SAT A: PerteSignal=oui + InstrumentsOFF=oui ---")
-res_prop_A = inference_sat.query(variables=['PannePropulsion'],
-                                 evidence={'PerteSignal': 1, 'InstrumentsOFF': 1})
-print(f"- P(PannePropulsion=oui | PerteSignal=oui, InstrumentsOFF=oui) = {res_prop_A.values[1]:.3f}")
+model_transport.add_cpds(cpd_age, cpd_carb, cpd_elec, cpd_moteur, cpd_voyant)
+infer_trans = VariableElimination(model_transport)
 
-# Scenario 2: Perte de signal sans Instruments off (possible orientation/orbit issue)
-print("\n--- CAS SAT B: PerteSignal=oui + InstrumentsOFF=non ---")
-res_prop_B = inference_sat.query(variables=['PannePropulsion'],
-                                 evidence={'PerteSignal': 1, 'InstrumentsOFF': 0})
-print(f"- P(PannePropulsion=oui | PerteSignal=oui, InstrumentsOFF=non) = {res_prop_B.values[1]:.3f}")
+# Calcul : Si le voyant est allumé, quelle est la probabilité que le carburant soit vide ?
+res_panne = infer_trans.query(variables=['NiveauCarburant'], 
+                              evidence={'VoyantTableauBord': 1})
+print(f"P(Carburant=Vide | Voyant=Allumé) = {res_panne.values[0]:.3f}")
 
-# Visualisation
-visualiser_reseau(model_sat, "ETAPE 6 - DIAGNOSTIC DE PANNE SATELLITE") 
+# =============================================================================
+# AFFICHAGE DES STRUCTURES (Utilisant votre fonction existante)
+# =============================================================================
+afficher_structure(model_transport, "RESEAU PANNE VEHICULE")
 
-afficher_structure(model_sat, "5. DIAGNOSTIC SATELLITE")
+
+
+# =============================================================================
+# VISUALISATION DES ReSEAUX BAYeSIENS
+# =============================================================================
+print("\n" + "="*50)
+print("VISUALISATION DES RESEAUX")
+print("="*50)
+
+try:
+    import matplotlib.pyplot as plt
+    import networkx as nx
+    
+    def visualiser_reseau(model, titre):
+        """Visualise un reseau bayesien avec matplotlib"""
+        plt.figure(figsize=(10, 8))
+        
+        # Creer un graphe oriente
+        G = nx.DiGraph()
+        G.add_edges_from(model.edges())
+        
+        # Disposition des nœuds
+        pos = nx.spring_layout(G, k=2, iterations=50)
+        
+        # Dessiner les nœuds
+        nx.draw_networkx_nodes(G, pos, 
+                              node_size=2000, 
+                              node_color='lightblue',
+                              alpha=0.9,
+                              edgecolors='black',
+                              linewidths=1)
+        
+        # Dessiner les arêtes
+        nx.draw_networkx_edges(G, pos,
+                              edge_color='gray',
+                              arrows=True,
+                              arrowsize=25,
+                              arrowstyle='->',
+                              width=2)
+        
+        # Dessiner les labels
+        nx.draw_networkx_labels(G, pos, 
+                               font_size=10, 
+                               font_weight='bold')
+        
+        plt.title(titre, fontsize=16, fontweight='bold', pad=20)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.show()
+        
+        # Afficher les informations du reseau
+        print(f"Reseau: {titre}")
+        print(f"Nombre de noeuds: {len(G.nodes())}")
+        print(f"Nombre d'aretes: {len(G.edges())}")
+        print(f"Noeuds: {list(G.nodes())}")
+        print("-" * 40)
+    
+    # Visualiser les trois reseaux
+    print("Generation des visualisations...")
+    
+
+    # Reseau 2: Reseau medical complexe
+    visualiser_reseau(model_transport, "ETAPE 5")
+    
+
+    
+except ImportError:
+    print("Bibliotheques de visualisation non disponibles.")
+    print("Installation recommandee: pip install matplotlib networkx")
