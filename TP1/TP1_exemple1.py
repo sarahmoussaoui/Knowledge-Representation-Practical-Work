@@ -134,7 +134,7 @@ def decision_medicale_acne(ds):
 # CAS D'ÉTUDE : DIAGNOSTIC MÉDICAL DE LA PROVENANCE DE L'ACNÉ
 # =============================================================================
 
-print("🏥 CAS D'ÉTUDE : SYSTÈME EXPERT DE DIAGNOSTIC DE LA PROVENANCE DE L'ACNÉ")
+print("CAS D'ÉTUDE : SYSTÈME EXPERT DE DIAGNOSTIC DE LA PROVENANCE DE L'ACNÉ")
 print("----------------------------------------------------------------------")
 
 # Cadre de discernement (Theta) : les causes mutuellement exclusives possibles

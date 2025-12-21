@@ -70,24 +70,24 @@ class DempsterShafer:
 # EXEMPLE : LE COUSCOUS N'ÉTAIT PAS BON
 # =============================================================================
 
-print("🍽️ CAS D'ÉTUDE : POURQUOI LE COUSCOUS N'ÉTAIT PAS BON ?")
+print("CAS D'ÉTUDE : POURQUOI LE COUSCOUS N'ÉTAIT PAS BON ?")
 print("----------------------------------------------------")
 
 causes = ['Sel', 'Cuisson', 'Ingredients', 'Pas_Probleme']
 
-# 👵 GRAND-MÈRE
+# GRAND-MÈRE
 grand_mere = DempsterShafer(causes)
 grand_mere.set_mass(['Cuisson'], 0.6)
 grand_mere.set_mass(['Sel', 'Cuisson'], 0.2)
 grand_mere.set_mass(causes, 0.2)
 
-# 👨‍🍳 CHEF
+# CHEF
 chef = DempsterShafer(causes)
 chef.set_mass(['Ingredients'], 0.6)
 chef.set_mass(['Cuisson'], 0.1)
 chef.set_mass(causes, 0.3)
 
-# 👩 MÈRE
+# MÈRE
 mere = DempsterShafer(causes)
 mere.set_mass(['Sel'], 0.3)
 mere.set_mass(['Pas_Probleme'], 0.3)
@@ -104,9 +104,9 @@ fusion_finale = fusion_1.combine(mere)
 # ANALYSES
 # =============================================================================
 
-grand_mere.print_analysis("👵 Croyance de la Grand-mère")
-chef.print_analysis("👨‍🍳 Croyance du Chef")
-mere.print_analysis("👩 Croyance de la Mère")
+grand_mere.print_analysis("Croyance de la Grand-mère")
+chef.print_analysis("Croyance du Chef")
+mere.print_analysis("Croyance de la Mère")
 
-fusion_finale.print_analysis("🔗 Fusion Finale des Croyances")
+fusion_finale.print_analysis("Fusion Finale des Croyances")
 
