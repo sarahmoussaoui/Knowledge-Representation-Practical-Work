@@ -97,6 +97,8 @@ class DempsterShafer:
         best = max(elements, key=lambda x: self.belief([x]))
         print(f"\nCONCLUSION : La cause la plus probable est '{best}' (Croyance la plus élevée = {self.belief([best]):.4f})")
 
+
+#  EXEMPLE D'UTILISATION DANS UN CONTEXTE MÉDICAL
 def decision_medicale_acne(ds):
     """Fournit une recommandation thérapeutique basée sur le diagnostic DS."""
     print("\n" + "#"*40)
