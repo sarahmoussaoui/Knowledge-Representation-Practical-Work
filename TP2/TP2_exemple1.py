@@ -8,11 +8,11 @@ from skfuzzy import control as ctrl
 # =============================================================================
 
 # === VARIABLES D'ENTRÉE ===
-dma = ctrl.Antecedent(np.arange(0, 1001, 1), 'dma')
-probabilite_collision = ctrl.Antecedent(np.arange(0, 101, 1), 'probabilite_collision')
+dma = ctrl.Antecedent(np.arange(0, 1001, 1), 'dma') # Distance minimale d'approche en mètres 0 à 1000 m avec pas de 1 m
+probabilite_collision = ctrl.Antecedent(np.arange(0, 101, 1), 'probabilite_collision') # Probabilité de collision en pourcentage 0 à 100 % avec pas de 1 %
 
 # === VARIABLE DE SORTIE ===
-manoeuvre_impulsion = ctrl.Consequent(np.arange(0, 11, 1), 'manoeuvre_impulsion')
+manoeuvre_impulsion = ctrl.Consequent(np.arange(0, 11, 1), 'manoeuvre_impulsion') # Impulsion de manœuvre en N.s 0 à 10 N.s avec pas de 1 N.s
 
 # === FONCTIONS D’APPARTENANCE ===
 
@@ -30,7 +30,7 @@ manoeuvre_impulsion['moyenne'] = fuzz.trimf(manoeuvre_impulsion.universe, [4, 6,
 manoeuvre_impulsion['forte']   = fuzz.trimf(manoeuvre_impulsion.universe, [7, 10, 10])
 
 # =============================================================================
-# 1️⃣ GRAPHES DES FONCTIONS DE CROYANCE (SANS VALEUR CRISP)
+# GRAPHES DES FONCTIONS DE CROYANCE (SANS VALEUR CRISP)
 # =============================================================================
 
 def plot_membership_functions(var, title):
@@ -49,12 +49,12 @@ plot_membership_functions(probabilite_collision, "Fonctions de croyance – Prob
 plot_membership_functions(manoeuvre_impulsion, "Fonctions de croyance – Impulsion de manœuvre")
 
 # =============================================================================
-# 2️⃣ RÈGLES FLOUES
+# RÈGLES FLOUES
 # =============================================================================
 
 regles_collision = [
-    ctrl.Rule(dma['critique'] | probabilite_collision['elevee'], manoeuvre_impulsion['forte']),
-    ctrl.Rule(dma['proche'] & probabilite_collision['elevee'], manoeuvre_impulsion['forte']),
+    ctrl.Rule(dma['critique'] | probabilite_collision['elevee'], manoeuvre_impulsion['forte']), # Si DMA critique OU probabilité élevée, alors impulsion forte
+    ctrl.Rule(dma['proche'] & probabilite_collision['elevee'], manoeuvre_impulsion['forte']), # Si DMA proche ET probabilité élevée, alors impulsion forte
     ctrl.Rule(dma['critique'] & probabilite_collision['moyenne'], manoeuvre_impulsion['forte']),
     ctrl.Rule(dma['proche'] & probabilite_collision['moyenne'], manoeuvre_impulsion['moyenne']),
     ctrl.Rule(dma['critique'] & probabilite_collision['faible'], manoeuvre_impulsion['moyenne']),
@@ -63,15 +63,15 @@ regles_collision = [
     ctrl.Rule(dma['sure'] & probabilite_collision['faible'], manoeuvre_impulsion['aucune'])
 ]
 
-systeme_collision = ctrl.ControlSystem(regles_collision)
-controleur_collision = ctrl.ControlSystemSimulation(systeme_collision)
+systeme_collision = ctrl.ControlSystem(regles_collision) # Création du système de contrôle flou
+controleur_collision = ctrl.ControlSystemSimulation(systeme_collision) # Simulation du contrôleur flou
 
 # =============================================================================
-# 3️⃣ FONCTION POUR AFFICHER ACTIVATION (ZONE COLORÉE)
+# FONCTION POUR AFFICHER ACTIVATION (ZONE COLORÉE)
 # =============================================================================
 
 def plot_membership_with_activation(universe, mf, value, label, color):
-    mu = fuzz.interp_membership(universe, mf, value)
+    mu = fuzz.interp_membership(universe, mf, value) # Degré d'appartenance mu pour la valeur donnée
     plt.plot(universe, mf, color=color, linewidth=2, label=label)
     plt.fill_between(universe, 0, np.minimum(mf, mu), color=color, alpha=0.4)
     plt.axvline(value, linestyle='--', color='k')
@@ -79,7 +79,7 @@ def plot_membership_with_activation(universe, mf, value, label, color):
     return mu
 
 # =============================================================================
-# 4️⃣ EXEMPLE DE SCÉNARIO AVEC ACTIVATION
+# EXEMPLE DE SCÉNARIO AVEC ACTIVATION
 # =============================================================================
 
 dma_value = 150

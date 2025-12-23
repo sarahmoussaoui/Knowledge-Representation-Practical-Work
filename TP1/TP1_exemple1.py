@@ -69,8 +69,7 @@ class DempsterShafer:
                     if intersection != frozenset():
                         combined.mass[intersection] += (self.mass[A] * other.mass[B]) * normalisation_factor
         
-        # Si K=1, il y a un conflit total, la combinaison est indéfinie ou 0 (géré implicitement)
-        
+        # Si K=1, il y a un conflit total, la combinaison est indéfinie
         return combined
     
     def print_analysis(self, title):
@@ -82,9 +81,8 @@ class DempsterShafer:
         print("\nMASSES DE CROYANCE (m) :")
         for key, value in sorted(self.mass.items(), key=lambda x: -x[1]):
             if value > 0.001:
-                # Affichage des ensembles sans les guillemets pour plus de clarté
                 set_str = str(set(key)).replace("'", "") 
-                print(f"  m({set_str}) = {value:.4f}")
+                print(f"  m({set_str}) = {value:.4f}")
         
         print("\nDEGRES DE CROYANCE (Bel) ET PLAUSIBILITE (Pl) :")
         elements = list(self.theta)
@@ -92,42 +90,205 @@ class DempsterShafer:
             bel = self.belief([elem])
             pl = self.plausibility([elem])
             interval = self.confidence_interval([elem])
-            print(f"  {elem:15}: Bel = {bel:.4f}, Pl = {pl:.4f}, Incertitude = {pl-bel:.4f}, Intervalle = [{interval[0]:.4f}, {interval[1]:.4f}]")
+            print(f"  {elem:15}: Bel = {bel:.4f}, Pl = {pl:.4f}, "
+                  f"Incertitude = {pl-bel:.4f}, "
+                  f"Intervalle = [{interval[0]:.4f}, {interval[1]:.4f}]")
         
+        # Trouver la meilleure hypothèse (élémentaire avec la plus haute croyance)
         best = max(elements, key=lambda x: self.belief([x]))
-        print(f"\nCONCLUSION : La cause la plus probable est '{best}' (Croyance la plus élevée = {self.belief([best]):.4f})")
+        best_bel = self.belief([best])
+        
+        # Amélioration: Si toutes les croyances sont 0, on vérifie les ensembles composites
+        if best_bel == 0.0:
+            # Chercher parmi tous les ensembles non-vides
+            all_subsets = [subset for subset in self.mass if subset != frozenset()]
+            if all_subsets:
+                best_composite = max(all_subsets, key=lambda x: self.mass[x])
+                best_mass = self.mass[best_composite]
+                set_str = str(set(best_composite)).replace("'", "")
+                print(f"\nNOTE : Toutes les croyances élémentaires sont à 0.")
+                print(f"L'ensemble composite avec la plus haute masse est {set_str} (m = {best_mass:.4f})")
+        
+        print(f"\nCONCLUSION (élémentaire): La cause la plus probable est '{best}' "
+              f"(Croyance = {best_bel:.4f})")
 
-
-#  EXEMPLE D'UTILISATION DANS UN CONTEXTE MÉDICAL
-def decision_medicale_acne(ds):
-    """Fournit une recommandation thérapeutique basée sur le diagnostic DS."""
-    print("\n" + "#"*40)
-    print("RECOMMANDATION THÉRAPEUTIQUE AUTOMATISÉE")
-    print("#"*40)
-    
-    meilleure_croyance = max(ds.theta, key=lambda x: ds.belief([x]))
-    croyance_max = ds.belief([meilleure_croyance])
-    
-    # Seuil de décision pour la confiance
-    seuil_confidence = 0.40 
-    
-    print(f"Diagnostic principal : **{meilleure_croyance}** (Croyance: {croyance_max:.4f})")
-    
-    if croyance_max >= seuil_confidence:
-        if meilleure_croyance == 'Hormonale':
-            print("Action : Forte suspicion de cause Hormonale. Envisager un traitement ciblé (ex: pilule ou anti-androgènes).")
-        elif meilleure_croyance == 'Stress':
-            print("Action : Forte suspicion de Stress. Recommandation : gestion du stress (yoga, méditation, techniques de relaxation).")
-        elif meilleure_croyance == 'Alimentaire':
-            print("Action : Forte suspicion Alimentaire. Prescrire un journal alimentaire, conseiller un régime faible en IG et produits laitiers.")
-        elif meilleure_croyance == 'Hygiène':
-            print("Action : Forte suspicion Hygiène. Réviser la routine de soins (nettoyage doux, non-comédogène).")
-        elif meilleure_croyance == 'Pas_Acné':
-            print("Action : Le diagnostic d'acné est faible. Reconsidérer d'autres problèmes dermatologiques.")
+    def print_detailed_analysis(self, title):
+        """Affiche une analyse complète incluant les ensembles composites."""
+        print("\n" + "="*60)
+        print(f"ANALYSE DETAILLEE : {title}")
+        print("="*60)
+        
+        print("\nMASSES DE CROYANCE (m) :")
+        for key, value in sorted(self.mass.items(), key=lambda x: -x[1]):
+            if value > 0.001:
+                set_str = str(set(key)).replace("'", "")
+                print(f"  m({set_str}) = {value:.4f}")
+        
+        print("\nDEGRES DE CROYANCE (Bel) ET PLAUSIBILITE (Pl) :")
+        
+        # 1. D'abord les hypothèses élémentaires
+        print("\n  --- HYPOTHÈSES ÉLÉMENTAIRES ---")
+        elements = list(self.theta)
+        for elem in elements:
+            bel = self.belief([elem])
+            pl = self.plausibility([elem])
+            interval = self.confidence_interval([elem])
+            print(f"  {elem:15}: Bel = {bel:.4f}, Pl = {pl:.4f}, "
+                  f"Incertitude = {pl-bel:.4f}")
+        
+        # 2. Ensuite les combinaisons importantes
+        print("\n  --- ENSEMBLES COMPOSITES IMPORTANTS ---")
+        
+        # Liste pour stocker les ensembles affichés (éviter les doublons)
+        displayed_subsets = []
+        
+        # D'abord afficher les ensembles avec masse > 0
+        for subset, mass in sorted(self.mass.items(), key=lambda x: -x[1]):
+            if mass > 0.001 and len(subset) > 1:  # Uniquement les ensembles composites
+                subset_list = list(subset)
+                bel = self.belief(subset_list)
+                pl = self.plausibility(subset_list)
+                set_str = "{" + ", ".join(subset_list) + "}"
+                print(f"  {set_str:25}: Bel = {bel:.4f}, Pl = {pl:.4f}, "
+                      f"Incertitude = {pl-bel:.4f}, m = {mass:.4f}")
+                displayed_subsets.append(frozenset(subset_list))
+        
+        # Ensuite, générer d'autres combinaisons intéressantes
+        from itertools import combinations
+        
+        # Générer les combinaisons de 2 éléments
+        all_combinations = []
+        for combo_size in [2, 3]:
+            for combo in combinations(elements, combo_size):
+                all_combinations.append(frozenset(combo))
+        
+        # Afficher les combinaisons qui n'ont pas encore été affichées et qui sont intéressantes
+        for combo in all_combinations:
+            if combo not in displayed_subsets and combo != frozenset():
+                subset_list = list(combo)
+                bel = self.belief(subset_list)
+                pl = self.plausibility(subset_list)
+                
+                # Afficher si plausibilité > 0.5 OU si l'ensemble est intéressant
+                if pl > 0.5 or bel > 0:
+                    set_str = "{" + ", ".join(subset_list) + "}"
+                    print(f"  {set_str:25}: Bel = {bel:.4f}, Pl = {pl:.4f}, "
+                          f"Incertitude = {pl-bel:.4f}")
+        
+        # 3. L'ensemble complet Θ
+        print("\n  --- ENSEMBLE COMPLET ---")
+        bel_theta = self.belief(list(self.theta))
+        pl_theta = self.plausibility(list(self.theta))
+        print(f"  Θ (toutes causes): Bel = {bel_theta:.4f}, Pl = {pl_theta:.4f}")
+        
+        # Trouver la meilleure conclusion
+        print("\n  --- CONCLUSION ---")
+        
+        # Option 1: Meilleure hypothèse élémentaire
+        best_elem = max(elements, key=lambda x: self.belief([x]))
+        best_elem_bel = self.belief([best_elem])
+        
+        # Option 2: Meilleur ensemble composite (avec la plus haute masse)
+        composite_subsets = [s for s in self.mass if len(s) > 1 and self.mass[s] > 0]
+        if composite_subsets:
+            best_composite = max(composite_subsets, key=lambda x: self.mass[x])
+            best_comp_mass = self.mass[best_composite]
+            best_comp_bel = self.belief(list(best_composite))
+            set_str = str(set(best_composite)).replace("'", "")
+            
+            print(f"  Hypothèse élémentaire la plus probable: '{best_elem}' "
+                  f"(Bel = {best_elem_bel:.4f})")
+            print(f"  Ensemble composite le plus soutenu: {set_str} "
+                  f"(m = {best_comp_mass:.4f}, Bel = {best_comp_bel:.4f})")
+            
+            # Décision: choisir l'élémentaire si sa croyance est raisonnable, sinon le composite
+            if best_elem_bel >= 0.1: # seuil aléatoire
+                print(f"  RECOMMANDATION: Privilégier l'hypothèse '{best_elem}'")
+            else:
+                print(f"  RECOMMANDATION: L'incertitude est trop élevée. "
+                      f"Considérer l'ensemble {set_str}")
         else:
-            print(f"Action : Cible principale - {meilleure_croyance}. Recommandation spécifique.")
+            print(f"  La cause la plus probable est '{best_elem}' "
+                  f"(Croyance = {best_elem_bel:.4f})")
+
+
+def decision_medicale_acne_ameliorée(ds):
+    """Fournit une recommandation thérapeutique améliorée basée sur le diagnostic DS."""
+    print("\n" + "#"*60)
+    print("RECOMMANDATION THÉRAPEUTIQUE AMÉLIORÉE")
+    print("#"*60)
+    
+    elements = list(ds.theta)
+    
+    # 1. Meilleure hypothèse élémentaire
+    meilleure_elementaire = max(elements, key=lambda x: ds.belief([x]))
+    croyance_elementaire = ds.belief([meilleure_elementaire])
+    
+    # 2. Meilleur ensemble composite (masse la plus élevée)
+    composite_subsets = [s for s in ds.mass if len(s) > 1 and ds.mass[s] > 0]
+    if composite_subsets:
+        meilleur_composite = max(composite_subsets, key=lambda x: ds.mass[x])
+        masse_composite = ds.mass[meilleur_composite]
+        set_str = str(set(meilleur_composite)).replace("'", "")
     else:
-        print("ACTION : **INCERTITUDE ÉLEVÉE**. Le niveau de croyance est insuffisant. Recommander des tests complémentaires ou un suivi rapproché pour affiner le diagnostic.")
+        meilleur_composite = None
+    
+    # 3. Décision avec plusieurs seuils
+    seuil_fort = 0.40
+    seuil_modere = 0.20
+    seuil_faible = 0.10
+    
+    print(f"Diagnostic élémentaire : **{meilleure_elementaire}** "
+          f"(Croyance: {croyance_elementaire:.4f})")
+    
+    if meilleur_composite:
+        print(f"Diagnostic composite : **{set_str}** "
+              f"(Masse: {masse_composite:.4f})")
+    
+    print("\n" + "-"*40)
+    
+    # Stratégie de décision
+    if croyance_elementaire >= seuil_fort:
+        print("NIVEAU DE CONFIANCE : ÉLEVÉ")
+        if meilleure_elementaire == 'Hormonale':
+            print("ACTION : Forte suspicion de cause Hormonale.")
+            print("         Envisager un traitement ciblé (pilule, anti-androgènes).")
+        elif meilleure_elementaire == 'Stress':
+            print("ACTION : Forte suspicion de Stress.")
+            print("         Recommandation : gestion du stress.")
+        elif meilleure_elementaire == 'Alimentaire':
+            print("ACTION : Forte suspicion Alimentaire.")
+            print("         Journal alimentaire + régime faible IG.")
+        elif meilleure_elementaire == 'Hygiène':
+            print("ACTION : Forte suspicion Hygiène.")
+            print("         Réviser la routine de soins.")
+        elif meilleure_elementaire == 'Pas_Acné':
+            print("ACTION : Le diagnostic d'acné est faible.")
+            print("         Reconsidérer d'autres problèmes dermatologiques.")
+    
+    elif croyance_elementaire >= seuil_modere:
+        print("NIVEAU DE CONFIANCE : MODÉRÉ")
+        if meilleur_composite and masse_composite > croyance_elementaire:
+            print(f"ACTION : Considérer l'ensemble {set_str}.")
+            print(f"         Traitement couvrant les causes: {set_str}")
+        else:
+            print(f"ACTION : Suspicion modérée de {meilleure_elementaire}.")
+            print("         Traitement ciblé + surveillance.")
+    
+    elif croyance_elementaire >= seuil_faible:
+        print("NIVEAU DE CONFIANCE : FAIBLE")
+        print("ACTION : **INCERTITUDE SIGNIFICATIVE**.")
+        if meilleur_composite:
+            print(f"         L'ensemble {set_str} est le plus soutenu (m={masse_composite:.4f}).")
+            print("         Approche combinée recommandée.")
+        else:
+            print("         Approche diagnostique élargie recommandée.")
+    
+    else:
+        print("NIVEAU DE CONFIANCE : TRÈS FAIBLE")
+        print("ACTION : **INCERTITUDE ÉLEVÉE**.")
+        print("         Tests complémentaires nécessaires.")
+        print("         Suivi rapproché pour affiner le diagnostic.")
 
 
 # =============================================================================
@@ -135,7 +296,7 @@ def decision_medicale_acne(ds):
 # =============================================================================
 
 print("CAS D'ÉTUDE : SYSTÈME EXPERT DE DIAGNOSTIC DE LA PROVENANCE DE L'ACNÉ")
-print("----------------------------------------------------------------------")
+print("="*80)
 
 # Cadre de discernement (Theta) : les causes mutuellement exclusives possibles
 causes_acne = [
@@ -147,39 +308,52 @@ causes_acne = [
 ]
 
 # --- SOURCE 1 : Observation Clinique du Dermatologue (m1) ---
-# Le dermato observe des lésions profondes (hormonal/stress) et des comédons (hygiène/alimentaire)
 dermatologue_obs = DempsterShafer(causes_acne)
 dermatologue_obs.set_mass(['Hormonale', 'Stress'], 0.40)
 dermatologue_obs.set_mass(['Hygiène', 'Alimentaire'], 0.25)
 dermatologue_obs.set_mass(causes_acne, 0.35) # Incertitude résiduelle
 
 # --- SOURCE 2 : Résultats des Tests Hormonaux (m2) ---
-# Un test sanguin montre une perturbation hormonale claire
 tests_hormonaux = DempsterShafer(causes_acne)
 tests_hormonaux.set_mass(['Hormonale'], 0.55)
-tests_hormonaux.set_mass(['Pas_Acné', 'Alimentaire'], 0.10) # Petite chance que ce soit autre chose
+tests_hormonaux.set_mass(['Pas_Acné', 'Alimentaire'], 0.10)
 tests_hormonaux.set_mass(causes_acne, 0.35)
 
 # --- SOURCE 3 : Historique du Patient (m3) ---
-# Le patient rapporte une période de stress et des changements alimentaires récents
 historique_patient = DempsterShafer(causes_acne)
 historique_patient.set_mass(['Stress', 'Alimentaire'], 0.60)
-historique_patient.set_mass(['Hormonale'], 0.10) # Laisse une faible possibilité d'une cause interne
+historique_patient.set_mass(['Hormonale'], 0.10)
 historique_patient.set_mass(causes_acne, 0.30)
 
 print("\nPROCESSUS DE FUSION (Règle de Dempster) :")
+print("-"*80)
+
 # Fusion m1 et m2
 combined_acne1 = dermatologue_obs.combine(tests_hormonaux)
 # Fusion (m1 * m2) et m3
 combined_acne_final = combined_acne1.combine(historique_patient)
 
+print("\n" + "="*80)
+print("ANALYSES INDIVIDUELLES DES SOURCES")
+print("="*80)
+
 # Affichage des analyses individuelles
-dermatologue_obs.print_analysis("Observation Dermatologue (m1)")
-tests_hormonaux.print_analysis("Tests Hormonaux (m2)")
-historique_patient.print_analysis("Historique Patient (m3)")
+dermatologue_obs.print_detailed_analysis("1. Observation Dermatologue (m1)")
+tests_hormonaux.print_detailed_analysis("2. Tests Hormonaux (m2)")
+historique_patient.print_detailed_analysis("3. Historique Patient (m3)")
+
+print("\n" + "="*80)
+print("DIAGNOSTIC FINAL APRÈS FUSION DES TROIS SOURCES")
+print("="*80)
 
 # Affichage du diagnostic final après fusion
-combined_acne_final.print_analysis("DIAGNOSTIC FINAL APRÈS FUSION (m1 * m2 * m3)")
+combined_acne_final.print_detailed_analysis("DIAGNOSTIC FINAL (m1 * m2 * m3)")
 
-# Prise de décision basée sur le résultat final
-decision_medicale_acne(combined_acne_final)
+# Prise de décision améliorée
+decision_medicale_acne_ameliorée(combined_acne_final)
+
+# Option: Afficher aussi l'analyse simple pour comparaison
+print("\n" + "="*80)
+print("ANALYSE SIMPLIFIÉE DU RÉSULTAT FINAL")
+print("="*80)
+combined_acne_final.print_analysis("Vue simplifiée du diagnostic final")

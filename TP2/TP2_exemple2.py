@@ -29,7 +29,7 @@ acceleration['maintenir'] = fuzz.trimf(acceleration.universe, [-1, 0, 1])
 acceleration['accelerer'] = fuzz.trimf(acceleration.universe, [1, 3, 5])
 
 # =========================================================
-# 1️⃣ VISUALISATION DES FONCTIONS DE CROYANCE (SANS VALEURS)
+# VISUALISATION DES FONCTIONS DE CROYANCE (SANS VALEURS)
 # =========================================================
 
 fig, axs = plt.subplots(3, 1, figsize=(8, 10))
@@ -47,7 +47,7 @@ plt.tight_layout()
 plt.show()
 
 # =========================================================
-# 2️⃣ RÈGLES FLOUES
+# RÈGLES FLOUES
 # =========================================================
 
 rules = [
@@ -63,7 +63,7 @@ system = ctrl.ControlSystem(rules)
 sim = ctrl.ControlSystemSimulation(system)
 
 # =========================================================
-# 3️⃣ EXEMPLE DE FUZZIFICATION (VALEURS CRISP)
+# EXEMPLE DE FUZZIFICATION (VALEURS CRISP)
 # =========================================================
 
 distance_val = 35   # m
@@ -76,7 +76,7 @@ sim.compute()
 output_acc = sim.output['acceleration']
 
 # =========================================================
-# 4️⃣ FONCTION UTILITAIRE POUR COLORIER L’ACTIVATION
+# FONCTION UTILITAIRE POUR COLORIER L’ACTIVATION
 # =========================================================
 
 def plot_activation(universe, mf, value, label, color):
@@ -87,7 +87,7 @@ def plot_activation(universe, mf, value, label, color):
     return mu
 
 # =========================================================
-# 5️⃣ FUZZIFICATION — DISTANCE
+# FUZZIFICATION — DISTANCE
 # =========================================================
 
 plt.figure(figsize=(7,4))
@@ -102,7 +102,7 @@ plt.grid()
 plt.show()
 
 # =========================================================
-# 6️⃣ FUZZIFICATION — VITESSE
+# FUZZIFICATION — VITESSE
 # =========================================================
 
 plt.figure(figsize=(7,4))
@@ -117,7 +117,7 @@ plt.grid()
 plt.show()
 
 # =========================================================
-# 7️⃣ SORTIE FLOUE + DÉFLOUTAGE
+# SORTIE FLOUE + DÉFLOUTAGE
 # =========================================================
 
 plt.figure(figsize=(7,4))
@@ -132,4 +132,4 @@ plt.legend()
 plt.grid()
 plt.show()
 
-print(f"👉 Accélération finale défloutée : {output_acc:.2f} m/s²")
+print(f"Accélération finale défloutée : {output_acc:.2f} m/s²")
